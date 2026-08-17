@@ -1,6 +1,6 @@
 streamlit
 requests
 zhipuai
-sniffio
-pydantic
-httpx
+pandas
+folium
+streamlit-folium
