@@ -1,6 +1,10 @@
 import streamlit as st
 import requests
 import time
+import pandas as pd
+import folium
+import plotly.express as px
+from streamlit_folium import st_folium
 from zhipuai import ZhipuAI
 
 st.set_page_config(page_title="智能地块潜力分析", layout="wide")
@@ -29,7 +33,7 @@ st.markdown("""
     [data-testid="stMetricValue"] { font-size: 24px; color: #111827; font-weight: 700; }
     .report-card {
         background-color: #FFFFFF; padding: 30px; border-radius: 12px; border-left: 6px solid #2563EB;
-        font-size: 16px; line-height: 1.8; color: #374151; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        font-size: 16px; line-height: 1.8; color: #374151; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;
     }
     .streamlit-expanderHeader { font-weight: 600; color: #374151; }
     </style>
@@ -131,13 +135,14 @@ def generate_ai_report(address, poi_data, official_name):
     报告必须包含以下重点：
     1. 【核心区位研判】：根据地理位置判断开发的基础条件。
     2. 【交通与生活机能】：客观描述提供的数据，必须提及具体的车站或商场名称。
-    3. 【开发潜力建议】：推测适合发展的物业类型并给出商业建议。
+    3. 【区域市场行情估算】：基于该地理位置的宏观历史数据，提取该大区的「历史平均尺价区间估算」与「租金回报率水平参考」。请务必在段落内明确标注：“此数据为基于历史大数据的宏观估算，仅供初步商业可行性参考，非实时精准报价”。
+    4. 【开发潜力建议】：推测适合发展的物业类型并给出商业建议。
     
     【绝对纪律要求】：
-    - 必须基于确切的客观数据，禁止脑补实时行情或自行虚构周边的设施与成交数据。没有数据直接说没有。
-    - 如果名单显示设施为“无”，必须在分析中客观指出“缺乏该项数据支持”。
+    - 设施名单必须基于确切的客观数据，禁止自行虚构周边的设施名称。
+    - 如果名单显示某类设施为“无”，必须在分析中客观指出。
     
-    请用专业的繁体中文撰写，字数 500 字以内，排版必须清晰、分段明确，严禁使用任何表情符号。
+    请用专业的繁体中文撰写，字数 600 字以内，排版必须清晰、分段明确，严禁使用任何表情符号。
     """
     user_prompt = f"目标地块：{official_name}\n\n"
     
@@ -153,14 +158,15 @@ def generate_ai_report(address, poi_data, official_name):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.1
+            temperature=0.2
         )
         return response.choices[0].message.content
     except Exception as e:
         return f"AI API 连线失败，真实错误讯息如下：\n\n`{str(e)}`"
 
 st.title("智能地块潜力分析仪表板")
-st.markdown("##### 整合空间数据 (GIS) 与大型语言模型，自动生成地段价值评估。")
+st.markdown("##### We specialize in cutting-edge PropTech solutions designed to empower real estate developers.")
+st.markdown("Our **Automated Land Parcel Analysis and Report Generation System** leverages open-source GIS data and advanced LLMs to rapidly assess site potential and transform complex urban data into actionable business insights.")
 
 with st.form("input_card"):
     st.markdown("**新建分析任务**")
@@ -180,7 +186,7 @@ if start_btn and target_address:
         lat, lon, official_name = get_coordinates(target_address)
         
     if lat is None or lon is None:
-        st.error(f"❌ 无法在地图上定位「{target_address}」。请尝试更换更准确的关键字。")
+        st.error(f"无法在地图上定位「{target_address}」。请尝试更换为更简短准确的关键字（例如去除过长的机构名称或后缀）。")
         st.stop()
         
     st.success(f"锁定目标：{official_name} (Lat: {lat:.4f}, Lon: {lon:.4f})")
@@ -191,6 +197,26 @@ if start_btn and target_address:
     if poi_data is None:
         st.error("获取周边设施数据失败 (免费节点超时或被限流)。对于过大的搜索半径，建议缩小范围后重新执行分析。")
         st.stop()
+
+    st.markdown("### 空间数据可视化 (GIS Mapping)")
+    m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
+    
+    folium.Marker(
+        [lat, lon], 
+        popup=official_name, 
+        icon=folium.Icon(color="blue", icon="info-sign")
+    ).add_to(m)
+    
+    folium.Circle(
+        radius=search_radius,
+        location=[lat, lon],
+        color="#2563EB",
+        fill=True,
+        fill_color="#3B82F6",
+        fill_opacity=0.2
+    ).add_to(m)
+    
+    st_folium(m, width=1200, height=350, returned_objects=[])
         
     st.markdown(f"### 周边设施分布 ({search_radius}m 半径)")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -198,6 +224,54 @@ if start_btn and target_address:
     kpi2.metric("学校与教育机构", f"{len(poi_data['学校与教育机构'])}")
     kpi3.metric("医院与医疗设施", f"{len(poi_data['医院与医疗设施'])}")
     kpi4.metric("购物商场", f"{len(poi_data['购物商场'])}")
+
+    chart_data = pd.DataFrame({
+        "设施类型": ["地铁与铁路站", "学校与教育机构", "医院与医疗设施", "购物商场"],
+        "数量": [
+            len(poi_data['地铁与铁路站']), 
+            len(poi_data['学校与教育机构']), 
+            len(poi_data['医院与医疗设施']), 
+            len(poi_data['购物商场'])
+        ]
+    })
+
+    fig = px.bar(
+        chart_data,
+        x="设施类型",
+        y="数量",
+        text="数量",
+        color_discrete_sequence=["#2563EB"]
+    )
+    
+    fig.update_traces(
+        textposition='outside',
+        textfont_size=16,
+        textfont_color="#111827"
+    )
+    
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title=None,
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=0, r=0, t=40, b=0),
+        xaxis=dict(
+            tickangle=0, 
+            tickfont=dict(size=14, color="#374151"),
+            showline=True, 
+            linewidth=1, 
+            linecolor='#E5E7EB'
+        ),
+        yaxis=dict(
+            showgrid=True, 
+            gridcolor="#E5E7EB", 
+            zeroline=True, 
+            zerolinecolor="#E5E7EB"
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
     
     with st.expander("点击展开：周边详细设施名单"):
         for category, items in poi_data.items():
@@ -209,6 +283,14 @@ if start_btn and target_address:
     st.markdown("<br>", unsafe_allow_html=True)
     
     st.markdown("### AI 智慧开发评估报告")
-    with st.spinner("系统正在基于各项核心客观数据生成报告..."):
+    with st.spinner("系统正在基于各项核心客观数据与宏观历史数据生成报告..."):
         report = generate_ai_report(target_address, poi_data, official_name)
         st.markdown(f'<div class="report-card">{report}</div>', unsafe_allow_html=True)
+        
+        st.download_button(
+            label="下载完整评估报告 (TXT)",
+            data=report,
+            file_name=f"{target_address}_可行性评估报告.txt",
+            mime="text/plain",
+            type="primary"
+        )
