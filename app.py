@@ -21,27 +21,24 @@ st.markdown("""
     
     [data-testid="stAppViewContainer"] { background-color: #F8FAFC; }
     
+    /* 侧边栏背景设定为深色 */
     [data-testid="stSidebar"] {
         background-color: #0F172A;
         padding-top: 2rem;
     }
     
-    /* 核心修复：精准定位侧边栏文字，不破坏下拉选单(Selectbox)内部结构 */
-    [data-testid="stSidebar"] p, 
-    [data-testid="stSidebar"] label, 
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3 {
+    /* 【核心安全修复】：精准定位侧边栏的纯文本与标签，将其改为白色。
+       绝对不触碰任何输入框 (Select/Input) 内部的 div 或 span，避免结构崩坏 */
+    [data-testid="stSidebar"] .stMarkdown p,
+    [data-testid="stSidebar"] .stMarkdown h1,
+    [data-testid="stSidebar"] .stMarkdown h2,
+    [data-testid="stSidebar"] .stMarkdown h3,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
         color: #F1F5F9 !important;
     }
     
-    /* 单独确保下拉菜单和输入框内选中的文字是深色可见的 */
-    [data-testid="stSidebar"] div[data-baseweb="select"] span,
-    [data-testid="stSidebar"] div[data-baseweb="input"] input {
-        color: #0F172A !important;
-        font-weight: 600;
-    }
-    
+    /* 侧边栏按钮特别美化 */
     [data-testid="stSidebar"] button {
         background-color: #3B82F6 !important;
         color: white !important;
@@ -56,6 +53,7 @@ st.markdown("""
         background-color: #2563EB !important;
     }
 
+    /* 主画面各种卡片的商务样式 */
     .recommendation-card {
         background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
         padding: 30px;
@@ -113,6 +111,7 @@ def show_success(msg):
 ZHIPU_API_KEY = "2040bad6a4de457db8783082ea9120bc.FDSw7nPPtfv8KCaD"
 client = ZhipuAI(api_key=ZHIPU_API_KEY)
 
+# 生成逼真的模拟尺价
 def get_mock_price(location_name):
     seed = sum([ord(c) for c in location_name])
     random.seed(seed)
@@ -145,7 +144,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/5.1"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/6.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -177,7 +176,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/5.1"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/6.0"}
     poi_details = {"地铁与铁路站": [], "学校与教育机构": [], "医院与医疗设施": [], "购物商场": []}
     
     for url in overpass_endpoints:
