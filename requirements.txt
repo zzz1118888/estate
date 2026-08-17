@@ -3,4 +3,5 @@ requests
 zhipuai
 pandas
 folium
+plotly
 streamlit-folium
