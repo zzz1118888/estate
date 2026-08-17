@@ -9,7 +9,7 @@ from zhipuai import ZhipuAI
 import random
 
 # ==========================================
-# 1. 页面设定与高级极简 CSS
+# 1. 页面设定与修复后的精准 CSS
 # ==========================================
 st.set_page_config(page_title="智能地块潜力分析", layout="wide", initial_sidebar_state="expanded")
 
@@ -23,18 +23,22 @@ st.markdown("""
     
     [data-testid="stSidebar"] {
         background-color: #0F172A;
-        color: #F1F5F9;
         padding-top: 2rem;
     }
-    [data-testid="stSidebar"] * {
+    
+    /* 核心修复：精准定位侧边栏文字，不破坏下拉选单(Selectbox)内部结构 */
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3 {
         color: #F1F5F9 !important;
     }
     
-    [data-testid="stSidebar"] div[data-baseweb="input"] input, 
-    [data-testid="stSidebar"] div[data-baseweb="select"] div {
+    /* 单独确保下拉菜单和输入框内选中的文字是深色可见的 */
+    [data-testid="stSidebar"] div[data-baseweb="select"] span,
+    [data-testid="stSidebar"] div[data-baseweb="input"] input {
         color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-        background-color: #FFFFFF !important;
         font-weight: 600;
     }
     
@@ -109,14 +113,12 @@ def show_success(msg):
 ZHIPU_API_KEY = "2040bad6a4de457db8783082ea9120bc.FDSw7nPPtfv8KCaD"
 client = ZhipuAI(api_key=ZHIPU_API_KEY)
 
-# 保留尺价的哈希算法，确保数字逼真且不穿帮
 def get_mock_price(location_name):
     seed = sum([ord(c) for c in location_name])
     random.seed(seed)
     base_price = random.randint(11000, 28000)
     top_price = base_price + random.randint(1500, 4000)
     return f"HK$ {base_price:,} - {top_price:,} / 呎"
-
 
 # ==========================================
 # 2. 核心数据获取与 AI 评估函数
@@ -143,7 +145,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/5.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/5.1"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -175,7 +177,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/5.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/5.1"}
     poi_details = {"地铁与铁路站": [], "学校与教育机构": [], "医院与医疗设施": [], "购物商场": []}
     
     for url in overpass_endpoints:
@@ -209,7 +211,6 @@ def fetch_poi_data(lat, lon, radius=1000):
             continue
     return None
 
-# --- 全新加入：针对具体设施的 AI 批量微观评估 ---
 @st.cache_data(ttl=3600)
 def generate_facility_evaluations(poi_data):
     all_pois = []
@@ -219,7 +220,6 @@ def generate_facility_evaluations(poi_data):
     if not all_pois:
         return {}
         
-    # 为了防止 API 超时，限制一次最多评估 20 个核心设施
     if len(all_pois) > 20:
         all_pois = random.sample(all_pois, 20)
         
@@ -252,7 +252,6 @@ def generate_facility_evaluations(poi_data):
         )
         result_text = response.choices[0].message.content
         
-        # 解析 AI 的回传结果
         for line in result_text.split('\n'):
             line = line.strip()
             if '：' in line:
@@ -406,7 +405,6 @@ if start_btn and target_address:
         show_error("获取周边设施数据失败。开源节点响应超时，请稍后再试或缩小搜寻半径。")
         st.stop()
 
-    # 新增：触发 AI 对各个具体设施的微观评价
     with st.spinner("AI 正在深度解构各项设施的微观商业价值..."):
         ai_facility_evals = generate_facility_evaluations(poi_data)
 
@@ -484,7 +482,6 @@ if start_btn and target_address:
             for item in poi_data['学校与教育机构']:
                 with st.expander(f"设施名称：{item}"):
                     price = get_mock_price(item)
-                    # 优先取 AI 真实生成的评价，若超时未抓到则提供安全备选
                     analysis = ai_facility_evals.get(item, "有效吸引周边家庭与教职群体，为物业带来稳定居住刚需。")
                     st.write(f"**周边物业尺价参考**：`{price}`")
                     st.write(f"**客群潜力分析**：{analysis}")
