@@ -15,21 +15,17 @@ st.set_page_config(page_title="智能地块潜力分析", layout="wide", initial
 
 st.markdown("""
     <style>
-    /* 隐藏右上角不必要的 Streamlit 设定菜单 */
     #MainMenu {visibility: hidden;}
-    /* 隐藏底部的 Made with Streamlit 水印 */
     footer {visibility: hidden;}
-    /* 注意：已经删除了 header {visibility: hidden;}，以保留侧边栏展开按钮 */
+    header {visibility: hidden;}
     
     [data-testid="stAppViewContainer"] { background-color: #F8FAFC; }
     
-    /* 侧边栏背景设定为深色 */
     [data-testid="stSidebar"] {
         background-color: #0F172A;
         padding-top: 2rem;
     }
     
-    /* 精准定位侧边栏的纯文本与标签，将其改为白色 */
     [data-testid="stSidebar"] .stMarkdown p,
     [data-testid="stSidebar"] .stMarkdown h1,
     [data-testid="stSidebar"] .stMarkdown h2,
@@ -39,7 +35,6 @@ st.markdown("""
         color: #F1F5F9 !important;
     }
     
-    /* 精准定位执行按钮，不破坏 Selectbox 内部结构 */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: #3B82F6 !important;
         color: white !important;
@@ -54,7 +49,6 @@ st.markdown("""
         background-color: #2563EB !important;
     }
 
-    /* 主画面各种卡片的商务样式 */
     .recommendation-card {
         background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
         padding: 30px;
@@ -137,7 +131,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/9.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/10.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -169,7 +163,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/9.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/10.0"}
     poi_details = {"地铁与铁路站": [], "学校与教育机构": [], "医院与医疗设施": [], "购物商场": []}
     
     for url in overpass_endpoints:
@@ -281,10 +275,23 @@ def generate_ai_report(address, poi_data, official_name):
     except Exception as e:
         return "系统连线异常", f"AI API 连线失败，真实错误讯息如下：\n\n`{str(e)}`"
 
+# --- 核心修复：更智能的悬浮框文本截断与排版引擎 ---
 def format_hover_text(items):
-    if not items: return "无数据"
-    chunks = [", ".join(items[i:i+3]) for i in range(0, len(items), 3)]
-    return "<br>".join(chunks)
+    if not items: 
+        return "无数据"
+    
+    # 限制悬浮框最多只展示前 8 个代表性设施，避免成为“文字墙”
+    display_items = items[:8]
+    
+    # 将每行显示的设施数量从 3 减少为 2，避免单行字符过宽导致 Plotly 强行截断
+    chunks = ["、".join(display_items[i:i+2]) for i in range(0, len(display_items), 2)]
+    hover_str = "<br>".join(chunks)
+    
+    # 如果总设施超过限制，底部添加智能提示
+    if len(items) > 8:
+        hover_str += f"<br><br><i>...等共 {len(items)} 项 (详见下方折叠面板)</i>"
+        
+    return hover_str
 
 RECOMMENDATIONS = {
     "教育学区 (适合学习)": [
@@ -428,9 +435,11 @@ if start_btn and target_address:
             chart_data, x="分类", y="数量", text="数量", custom_data=["清单"],
             color_discrete_sequence=["#3B82F6"]
         )
+        # 添加 align="left"，确保悬浮框内的排版左对齐，视觉更稳定
         fig.update_traces(
             textposition='outside', textfont_size=16, textfont_color="#1E293B",
-            hovertemplate="<b>%{x}</b><br>总数: %{y}<br><br><b>设施明细:</b><br>%{customdata[0]}<extra></extra>"
+            hovertemplate="<b>%{x}</b><br>总数: %{y}<br><br><b>设施明细:</b><br>%{customdata[0]}<extra></extra>",
+            hoverlabel=dict(align="left")
         )
         fig.update_layout(
             xaxis_title=None, yaxis_title=None, showlegend=False,
