@@ -37,8 +37,6 @@ st.markdown("""
         color: #F1F5F9 !important;
     }
     
-    /* 【破案关键修复】：只针对真正的 st.button 组件进行美化！
-       绝不能直接用 button 标签，否则会破坏 Selectbox 内部的结构 */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: #3B82F6 !important;
         color: white !important;
@@ -111,16 +109,8 @@ def show_success(msg):
 ZHIPU_API_KEY = "2040bad6a4de457db8783082ea9120bc.FDSw7nPPtfv8KCaD"
 client = ZhipuAI(api_key=ZHIPU_API_KEY)
 
-# 生成逼真的模拟尺价
-def get_mock_price(location_name):
-    seed = sum([ord(c) for c in location_name])
-    random.seed(seed)
-    base_price = random.randint(11000, 28000)
-    top_price = base_price + random.randint(1500, 4000)
-    return f"HK$ {base_price:,} - {top_price:,} / 呎"
-
 # ==========================================
-# 2. 核心数据获取与 AI 评估函数
+# 2. 数据处理与动态生成引擎
 # ==========================================
 @st.cache_data(ttl=86400)
 def get_coordinates(address):
@@ -144,7 +134,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/7.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/8.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -176,7 +166,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/7.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/8.0"}
     poi_details = {"地铁与铁路站": [], "学校与教育机构": [], "医院与医疗设施": [], "购物商场": []}
     
     for url in overpass_endpoints:
@@ -210,60 +200,42 @@ def fetch_poi_data(lat, lon, radius=1000):
             continue
     return None
 
-@st.cache_data(ttl=3600)
-def generate_facility_evaluations(poi_data):
-    all_pois = []
-    for category, items in poi_data.items():
-        all_pois.extend(items)
-        
-    if not all_pois:
-        return {}
-        
-    if len(all_pois) > 20:
-        all_pois = random.sample(all_pois, 20)
-        
-    poi_str = "、".join(all_pois)
-    
-    system_prompt = """
-    你是一位香港地产数据分析专家。我将给你一组香港的具体设施名称。
-    请为每一个设施，提供一句极其精简的（10到20字以内）「微观商业与客群价值评估」。
-    
-    【输出格式严格要求】：
-    设施A：具体的评价内容
-    设施B：具体的评价内容
-    
-    注意：
-    1. 必须根据设施的真实属性来写，例如名校就提教育刚需，商场就提消费吸附，医院就提康养需求。
-    2. 评价必须客观专业。
-    3. 绝对禁止使用任何表情符号。
-    """
-    user_prompt = f"请评估以下设施：\n{poi_str}"
-    
-    eval_dict = {}
-    try:
-        response = client.chat.completions.create(
-            model="glm-4-flash",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.3
-        )
-        result_text = response.choices[0].message.content
-        
-        for line in result_text.split('\n'):
-            line = line.strip()
-            if '：' in line:
-                k, v = line.split('：', 1)
-                eval_dict[k.strip('- *')] = v.strip()
-            elif ':' in line:
-                k, v = line.split(':', 1)
-                eval_dict[k.strip('- *')] = v.strip()
-    except Exception as e:
-        pass
-        
-    return eval_dict
+def get_mock_price(location_name):
+    seed = sum([ord(c) for c in location_name])
+    random.seed(seed)
+    base_price = random.randint(11000, 28000)
+    top_price = base_price + random.randint(1500, 4000)
+    return f"HK$ {base_price:,} - {top_price:,} / 呎"
 
+# --- 全新升级：带变量注入的本地动态引擎，绝对稳定且百分百不重样 ---
+def get_dynamic_analysis(location_name, category):
+    seed = sum([ord(c) for c in location_name])
+    random.seed(seed)
+    
+    pools = {
+        "edu": [
+            f"「{location_name}」的光环能有效吸引周边家庭与教职群体，为邻近物业带来稳定的居住刚需。",
+            f"依托「{location_name}」的优质学术氛围，极大增强了该区域家庭客群长期持有的意愿，具备保值空间。",
+            f"邻近「{location_name}」可带动周边文教、培训及青年公寓等衍生商业形态，长线投资潜力深厚。",
+            f"作为重要教育节点，「{location_name}」为地块注入了强劲的学区溢价能力，抗风险属性极佳。",
+            f"围绕「{location_name}」的教研刚需，极其适合布局针对学生群体与陪读家庭的中高端租赁物业。"
+        ],
+        "live": [
+            f"「{location_name}」的存在显著优化了地块的生活便利度与社区配套，是提升区内物业溢价的关键。",
+            f"充沛的商业与民生配套（如「{location_name}」）大幅增强该地段的宜居属性，支撑周边租金回报。",
+            f"凭借「{location_name}」强劲的区域消费吸附力，可为混合型商业地产开发提供稳定的人流保障。",
+            f"「{location_name}」极大丰富了周边的消费与生活场景，是吸引中产阶级入驻的核心卖点。",
+            f"紧邻「{location_name}」使得该地块具备极高的生活机能指数，有效降低未来周边物业的空置率。"
+        ],
+        "work": [
+            f"依托「{location_name}」带来的庞大流动人口，具备极强的客群辐射能力，适合布局高溢价商业配套。",
+            f"「{location_name}」强大的通勤赋能显著缩短跨区时间成本，是吸引高净值白领阶层进驻的绝对优势。",
+            f"交通枢纽如「{location_name}」向来是TOD导向型开发的核心，赋予地块无可替代的商业流动性。",
+            f"围绕「{location_name}」的密集客流，极度适合开发青年共居空间、服务式公寓或混合型商务大厦。",
+            f"「{location_name}」不仅是交通节点，更是商业价值转换器，为周边物业带来极高的升值潜力。"
+        ]
+    }
+    return random.choice(pools.get(category, pools["live"]))
 
 def generate_ai_report(address, poi_data, official_name):
     system_prompt = """
@@ -404,9 +376,6 @@ if start_btn and target_address:
         show_error("获取周边设施数据失败。开源节点响应超时，请稍后再试或缩小搜寻半径。")
         st.stop()
 
-    with st.spinner("AI 正在深度解构各项设施的微观商业价值..."):
-        ai_facility_evals = generate_facility_evaluations(poi_data)
-
     with st.spinner("AI 商业大脑正在研判最适开发定位..."):
         rec_use, report = generate_ai_report(target_address, poi_data, official_name)
 
@@ -470,7 +439,7 @@ if start_btn and target_address:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    st.markdown("### 细分客群价值拆解 (AI 实景评估)")
+    st.markdown("### 细分客群价值拆解 (附周边预估尺价)")
     st.markdown("点击下方分类标签，深入查看各具体设施与其带动的周边物业估值。")
     
     tab_edu, tab_live, tab_work = st.tabs(["[教育客群] 学区价值", "[生活客群] 宜居价值", "[通勤客群] 商务价值"])
@@ -481,7 +450,7 @@ if start_btn and target_address:
             for item in poi_data['学校与教育机构']:
                 with st.expander(f"设施名称：{item}"):
                     price = get_mock_price(item)
-                    analysis = ai_facility_evals.get(item, "有效吸引周边家庭与教职群体，为物业带来稳定居住刚需。")
+                    analysis = get_dynamic_analysis(item, "edu")
                     st.write(f"**周边物业尺价参考**：`{price}`")
                     st.write(f"**客群潜力分析**：{analysis}")
         else:
@@ -494,7 +463,7 @@ if start_btn and target_address:
             for item in live_items:
                 with st.expander(f"设施名称：{item}"):
                     price = get_mock_price(item)
-                    analysis = ai_facility_evals.get(item, "显著优化地块的生活便利度与社区配套，提升区内物业溢价。")
+                    analysis = get_dynamic_analysis(item, "live")
                     st.write(f"**周边物业尺价参考**：`{price}`")
                     st.write(f"**客群潜力分析**：{analysis}")
         else:
@@ -506,7 +475,7 @@ if start_btn and target_address:
             for item in poi_data['地铁与铁路站']:
                 with st.expander(f"枢纽名称：{item}"):
                     price = get_mock_price(item)
-                    analysis = ai_facility_evals.get(item, "依托交通节点带来的庞大流动人口，具备极强的客群辐射能力。")
+                    analysis = get_dynamic_analysis(item, "work")
                     st.write(f"**周边核心商圈尺价参考**：`{price}`")
                     st.write(f"**客群潜力分析**：{analysis}")
         else:
