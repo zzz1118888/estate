@@ -27,8 +27,7 @@ st.markdown("""
         padding-top: 2rem;
     }
     
-    /* 【核心安全修复】：精准定位侧边栏的纯文本与标签，将其改为白色。
-       绝对不触碰任何输入框 (Select/Input) 内部的 div 或 span，避免结构崩坏 */
+    /* 精准定位侧边栏的纯文本与标签，将其改为白色 */
     [data-testid="stSidebar"] .stMarkdown p,
     [data-testid="stSidebar"] .stMarkdown h1,
     [data-testid="stSidebar"] .stMarkdown h2,
@@ -38,8 +37,9 @@ st.markdown("""
         color: #F1F5F9 !important;
     }
     
-    /* 侧边栏按钮特别美化 */
-    [data-testid="stSidebar"] button {
+    /* 【破案关键修复】：只针对真正的 st.button 组件进行美化！
+       绝不能直接用 button 标签，否则会破坏 Selectbox 内部的结构 */
+    [data-testid="stSidebar"] div.stButton > button {
         background-color: #3B82F6 !important;
         color: white !important;
         border-radius: 6px;
@@ -49,7 +49,7 @@ st.markdown("""
         width: 100%;
         margin-top: 1rem;
     }
-    [data-testid="stSidebar"] button:hover {
+    [data-testid="stSidebar"] div.stButton > button:hover {
         background-color: #2563EB !important;
     }
 
@@ -144,7 +144,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/6.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/7.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -176,7 +176,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/6.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/7.0"}
     poi_details = {"地铁与铁路站": [], "学校与教育机构": [], "医院与医疗设施": [], "购物商场": []}
     
     for url in overpass_endpoints:
