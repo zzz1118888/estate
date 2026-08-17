@@ -15,9 +15,11 @@ st.set_page_config(page_title="智能地块潜力分析", layout="wide", initial
 
 st.markdown("""
     <style>
+    /* 隐藏右上角不必要的 Streamlit 设定菜单 */
     #MainMenu {visibility: hidden;}
+    /* 隐藏底部的 Made with Streamlit 水印 */
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* 注意：已经删除了 header {visibility: hidden;}，以保留侧边栏展开按钮 */
     
     [data-testid="stAppViewContainer"] { background-color: #F8FAFC; }
     
@@ -37,6 +39,7 @@ st.markdown("""
         color: #F1F5F9 !important;
     }
     
+    /* 精准定位执行按钮，不破坏 Selectbox 内部结构 */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: #3B82F6 !important;
         color: white !important;
@@ -134,7 +137,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/8.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/9.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -166,7 +169,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/8.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/9.0"}
     poi_details = {"地铁与铁路站": [], "学校与教育机构": [], "医院与医疗设施": [], "购物商场": []}
     
     for url in overpass_endpoints:
@@ -207,7 +210,6 @@ def get_mock_price(location_name):
     top_price = base_price + random.randint(1500, 4000)
     return f"HK$ {base_price:,} - {top_price:,} / 呎"
 
-# --- 全新升级：带变量注入的本地动态引擎，绝对稳定且百分百不重样 ---
 def get_dynamic_analysis(location_name, category):
     seed = sum([ord(c) for c in location_name])
     random.seed(seed)
