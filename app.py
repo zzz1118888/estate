@@ -10,7 +10,7 @@ import random
 import re
 
 # ==========================================
-# 1. 页面设定与修复后的精准 CSS
+# 1. 页面设定与精准 CSS
 # ==========================================
 st.set_page_config(page_title="智能地块潜力分析", layout="wide", initial_sidebar_state="expanded")
 
@@ -18,7 +18,6 @@ st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
     
     [data-testid="stAppViewContainer"] { background-color: #F8FAFC; }
     
@@ -78,7 +77,6 @@ st.markdown("""
         font-size: 16px; line-height: 1.8; color: #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;
     }
     
-    /* 优化 AI 报告内部的排版，使其更易读 */
     .report-card h3 { font-size: 20px; color: #1E293B; margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; }
     .report-card ul { padding-left: 20px; margin-bottom: 20px; }
     .report-card li { margin-bottom: 10px; }
@@ -117,6 +115,7 @@ client = ZhipuAI(api_key=ZHIPU_API_KEY)
 # ==========================================
 @st.cache_data(ttl=86400)
 def get_coordinates(address):
+    # 1. 香港政府 API (适合精确街道门牌)
     try:
         url = "https://www.als.ogcio.gov.hk/lookup"
         headers = {"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
@@ -134,10 +133,24 @@ def get_coordinates(address):
     except:
         pass
         
+    # 2. 【核心修复】Photon 免费引擎 - 容错率极高，无严苛 IP 限制，懂中文地名
+    try:
+        url = "https://photon.komoot.io/api/"
+        params = {"q": f"{address} 香港", "limit": 1}
+        res = requests.get(url, params=params, timeout=5)
+        if res.status_code == 200 and len(res.json().get("features", [])) > 0:
+            feature = res.json()["features"][0]
+            lon, lat = feature["geometry"]["coordinates"]
+            name = feature["properties"].get("name", address)
+            return float(lat), float(lon), f"空间图资定位: {name}"
+    except:
+        pass
+        
+    # 3. OSM 官方引擎 (兜底)
     try:
         url = "https://nominatim.openstreetmap.org/search"
-        params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/11.0"}
+        params = {"q": f"{address} 香港", "format": "json", "limit": 1}
+        headers = {"User-Agent": "PropTech_Feasibility_App/12.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -156,7 +169,6 @@ def fetch_poi_data(lat, lon, radius=1000):
         "http://overpass-api.de/api/interpreter"
     ]
     
-    # 核心修改：改为抓取中心经纬度 (out center tags;)
     overpass_query = f"""
     [out:json][timeout:45];
     (
@@ -170,8 +182,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out center tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/11.0"}
-    # 改为存储字典，保留设施的经纬度
+    headers = {"User-Agent": "PropTech_Feasibility_App/12.0"}
     poi_details = {"地铁与铁路站": {}, "学校与教育机构": {}, "医院与医疗设施": {}, "购物商场": {}}
     
     for url in overpass_endpoints:
@@ -184,7 +195,6 @@ def fetch_poi_data(lat, lon, radius=1000):
                     name = tags.get('name:zh', tags.get('name', '未命名设施'))
                     if name == '未命名设施': continue
                     
-                    # 抓取经纬度
                     p_lat = element.get('lat', element.get('center', {}).get('lat'))
                     p_lon = element.get('lon', element.get('center', {}).get('lon'))
                     if not p_lat or not p_lon: continue
@@ -274,7 +284,6 @@ def generate_ai_report(address, poi_data, official_name):
     3. 第二部分的指数必须是 0 到 100 之间的数字。
     """
     
-    # 提取设施名称给 AI
     user_prompt = f"目标地块：{official_name}\n\n周边设施名单：\n"
     for key, items_dict in poi_data.items():
         names = list(items_dict.keys())
@@ -292,7 +301,6 @@ def generate_ai_report(address, poi_data, official_name):
         )
         result_text = response.choices[0].message.content
         
-        # 安全解析三段式结构
         parts = result_text.split("===")
         rec_use = "综合潜力开发区"
         scores = {'live': 60, 'work': 60, 'edu': 60}
@@ -300,7 +308,6 @@ def generate_ai_report(address, poi_data, official_name):
         
         if len(parts) >= 3:
             rec_use = parts[0].replace("核心建议用途：", "").strip()
-            # 用正则精准抓取分数
             live_m = re.search(r'居住.*?(\d+)', parts[1])
             work_m = re.search(r'商务.*?(\d+)', parts[1])
             edu_m = re.search(r'教育.*?(\d+)', parts[1])
@@ -418,7 +425,6 @@ if start_btn and target_address:
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 新增功能：AI 评分进度条展示 ---
     st.markdown("### 🎯 AI 潜力雷达评分")
     col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
@@ -438,24 +444,21 @@ if start_btn and target_address:
     with col_map:
         m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
         
-        # 目标地块中心点 (醒目的蓝色大圈)
         folium.CircleMarker(
             location=[lat, lon], radius=8, popup=official_name,
             color="#FFFFFF", weight=2, fill=True, fill_color="#1D4ED8", fill_opacity=1
         ).add_to(m)
         
-        # 覆盖范围圈
         folium.Circle(
             radius=search_radius, location=[lat, lon],
             color="#3B82F6", fill=True, fill_color="#3B82F6", fill_opacity=0.1
         ).add_to(m)
         
-        # --- 新增功能：将抓取到的所有设施直接标注在地图上 ---
         color_map = {
-            "地铁与铁路站": "#EF4444", # 红色
-            "学校与教育机构": "#10B981", # 绿色
-            "医院与医疗设施": "#8B5CF6", # 紫色
-            "购物商场": "#F59E0B"     # 橙色
+            "地铁与铁路站": "#EF4444", 
+            "学校与教育机构": "#10B981", 
+            "医院与医疗设施": "#8B5CF6", 
+            "购物商场": "#F59E0B"     
         }
         
         for category, items_dict in poi_data.items():
