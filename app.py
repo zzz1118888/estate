@@ -292,19 +292,19 @@ def generate_ai_report(address, poi_data, official_name):
     商務潛力指數：XX
     教育潛力指數：XX
     ===
-    ### 核心區位研判
+    核心區位研判
     - （利用列點方式說明，句子務必精簡）
     - （每點不超過20個字）
     
-    ### 交通與生活機能
+    交通與生活機能
     - （點出最核心的車站或商場優勢）
     - （點出生活機能的輻射範圍）
     
-    ### 區域市場估算
+    區域市場估算
     - **平均呎價預計**：HK$ XX,XXX - XX,XXX
     - **租金回報預計**：約 X.X%
     
-    ### 開發潛力建議
+    開發潛力建議
     - （提供一項具體的商業開發建議）
     - （提供一項相關的目標客群建議）
     
@@ -446,7 +446,7 @@ if start_btn and target_address:
         show_error("獲取周邊設施數據失敗。開源節點響應超時，請稍後再試或縮小搜尋半徑。")
         st.stop()
 
-    with st.spinner("AI 商業大腦正在深度推演各類潛力指數..."):
+    with st.spinner("正在深度推演各類潛力指數..."):
         rec_use, scores, report = generate_ai_report(target_address, poi_data, official_name)
 
     st.markdown(f"""
@@ -535,7 +535,7 @@ if start_btn and target_address:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    st.markdown("### 🧩 細分客群價值拆解 (附周邊預估呎價)")
+    st.markdown("### 細分客群價值拆解 (附周邊預估呎價)")
     st.markdown("點擊下方分類標籤，深入查看各具體設施與其帶動的周邊物業估值。")
     
     tab_edu, tab_live, tab_work = st.tabs(["[教育客群] 學區價值", "[生活客群] 宜居價值", "[通勤客群] 商務價值"])
@@ -578,7 +578,7 @@ if start_btn and target_address:
             st.info("該目標半徑內暫無抓取到軌道交通樞紐數據。")
 
     st.markdown("---")
-    st.markdown("### 📑 AI 商業潛力深度報告")
+    st.markdown("### AI 商業潛力深度報告")
     st.markdown(f'<div class="report-card">{report}</div>', unsafe_allow_html=True)
     
     st.download_button(
