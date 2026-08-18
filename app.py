@@ -7,10 +7,9 @@ import plotly.express as px
 from streamlit_folium import st_folium
 from zhipuai import ZhipuAI
 import random
-import re
 
 # ==========================================
-# 1. 页面设定与精准 CSS
+# 1. 页面设定与修复后的精准 CSS
 # ==========================================
 st.set_page_config(page_title="智能地块潜力分析", layout="wide", initial_sidebar_state="expanded")
 
@@ -78,10 +77,6 @@ st.markdown("""
         font-size: 16px; line-height: 1.8; color: #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;
     }
     
-    .report-card h3 { font-size: 20px; color: #1E293B; margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; }
-    .report-card ul { padding-left: 20px; margin-bottom: 20px; }
-    .report-card li { margin-bottom: 10px; }
-    
     .rec-item-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px;
         margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #3B82F6;
@@ -116,43 +111,6 @@ client = ZhipuAI(api_key=ZHIPU_API_KEY)
 # ==========================================
 @st.cache_data(ttl=86400)
 def get_coordinates(address):
-    # =======================================================
-    # 【终极防翻车机制】：商业 Demo 本地高精度坐标直出引擎
-    # =======================================================
-    demo_locations = {
-        "九龙塘": (22.3372, 114.1752), "九龍塘": (22.3372, 114.1752), "Kowloon Tong": (22.3372, 114.1752),
-        "何文田": (22.3160, 114.1795), "Ho Man Tin": (22.3160, 114.1795),
-        "沙田": (22.3784, 114.1870), "Sha Tin": (22.3784, 114.1870),
-        "薄扶林": (22.2618, 114.1317), "Pok Fu Lam": (22.2618, 114.1317),
-        "红磡": (22.3023, 114.1833), "紅磡": (22.3023, 114.1833), "Hung Hom": (22.3023, 114.1833),
-        "铜锣湾": (22.2800, 114.1850), "銅鑼灣": (22.2800, 114.1850), "Causeway Bay": (22.2800, 114.1850),
-        "旺角": (22.3204, 114.1698), "Mong Kok": (22.3204, 114.1698),
-        "元朗": (22.4445, 114.0222), "Yuen Long": (22.4445, 114.0222),
-        "荃湾": (22.3713, 114.1144), "荃灣": (22.3713, 114.1144), "Tsuen Wan": (22.3713, 114.1144),
-        "将军澳": (22.3119, 114.2569), "將軍澳": (22.3119, 114.2569), "Tseung Kwan O": (22.3119, 114.2569),
-        "中环": (22.2819, 114.1581), "中環": (22.2819, 114.1581), "Central": (22.2819, 114.1581),
-        "观塘": (22.3142, 114.2266), "觀塘": (22.3142, 114.2266), "Kwun Tong": (22.3142, 114.2266),
-        "鲗鱼涌": (22.2842, 114.2118), "鰂魚涌": (22.2842, 114.2118), "Quarry Bay": (22.2842, 114.2118),
-        "金钟": (22.2796, 114.1655), "金鐘": (22.2796, 114.1655), "Admiralty": (22.2796, 114.1655),
-        "九龙湾": (22.3234, 114.2104), "九龍灣": (22.3234, 114.2104), "Kowloon Bay": (22.3234, 114.2104),
-        "乌溪沙": (22.4276, 114.2443), "烏溪沙": (22.4276, 114.2443), "Wu Kai Sha": (22.4276, 114.2443),
-        "迪士尼": (22.3129, 114.0412), "Disneyland": (22.3129, 114.0412)
-    }
-
-    # 智能预处理：移除空格、"站"字等干扰项，提高命中率
-    clean_address = address.replace(" ", "").replace("站", "").replace("香港", "")
-    
-    # 0. 优先匹配本地核心词库（0毫秒延迟，抗繁简体，100%成功）
-    for key in demo_locations:
-        if key in clean_address or clean_address in key:
-            lat, lon = demo_locations[key]
-            return lat, lon, f"高精度内置定位: {key}"
-
-    # =======================================================
-    # 词库外的地点，启用高容错 API 级联回退机制
-    # =======================================================
-    
-    # 1. 香港政府 API (精确街道门牌)
     try:
         url = "https://www.als.ogcio.gov.hk/lookup"
         headers = {"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
@@ -170,31 +128,10 @@ def get_coordinates(address):
     except:
         pass
         
-    # 2. ArcGIS 商业引擎 (懂简繁体转换，无严苛免费 IP 限制)
-    try:
-        url = "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates"
-        params = {
-            "f": "json",
-            "singleLine": f"{address}, Hong Kong",
-            "maxLocations": 1
-        }
-        res = requests.get(url, params=params, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            if data.get("candidates") and len(data["candidates"]) > 0:
-                candidate = data["candidates"][0]
-                lat = candidate["location"]["y"]
-                lon = candidate["location"]["x"]
-                display_name = candidate["address"]
-                return float(lat), float(lon), f"ArcGIS 智能定位: {display_name}"
-    except:
-        pass
-        
-    # 3. OSM 兜底
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/13.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/10.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -224,10 +161,10 @@ def fetch_poi_data(lat, lon, radius=1000):
       nwr["amenity"="clinic"](around:{radius},{lat},{lon});
       nwr["shop"="mall"](around:{radius},{lat},{lon});
     );
-    out center tags;
+    out tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/13.0"}
-    poi_details = {"地铁与铁路站": {}, "学校与教育机构": {}, "医院与医疗设施": {}, "购物商场": {}}
+    headers = {"User-Agent": "PropTech_Feasibility_App/10.0"}
+    poi_details = {"地铁与铁路站": [], "学校与教育机构": [], "医院与医疗设施": [], "购物商场": []}
     
     for url in overpass_endpoints:
         try:
@@ -239,25 +176,22 @@ def fetch_poi_data(lat, lon, radius=1000):
                     name = tags.get('name:zh', tags.get('name', '未命名设施'))
                     if name == '未命名设施': continue
                     
-                    p_lat = element.get('lat', element.get('center', {}).get('lat'))
-                    p_lon = element.get('lon', element.get('center', {}).get('lon'))
-                    if not p_lat or not p_lon: continue
-                    
                     if tags.get('railway') == 'station': 
                         exclude_keywords = ['大街', '世界', '探险', '明日', '山谷', '小镇', '缆车', '昂坪', '海洋', '公园']
                         if any(k in name for k in exclude_keywords):
                             continue
                         if '站' not in name and 'Station' not in name:
                             name = f"{name}站"
-                        poi_details["地铁与铁路站"][name] = (p_lat, p_lon)
+                        poi_details["地铁与铁路站"].append(name)
                         
                     elif tags.get('amenity') in ['school', 'university', 'college']: 
-                        poi_details["学校与教育机构"][name] = (p_lat, p_lon)
+                        poi_details["学校与教育机构"].append(name)
                     elif tags.get('amenity') in ['hospital', 'clinic']: 
-                        poi_details["医院与医疗设施"][name] = (p_lat, p_lon)
+                        poi_details["医院与医疗设施"].append(name)
                     elif tags.get('shop') == 'mall': 
-                        poi_details["购物商场"][name] = (p_lat, p_lon)
+                        poi_details["购物商场"].append(name)
                         
+                for key in poi_details: poi_details[key] = list(set(poi_details[key]))
                 return poi_details
         except:
             continue
@@ -278,61 +212,49 @@ def get_dynamic_analysis(location_name, category):
         "edu": [
             f"「{location_name}」的光环能有效吸引周边家庭与教职群体，为邻近物业带来稳定的居住刚需。",
             f"依托「{location_name}」的优质学术氛围，极大增强了该区域家庭客群长期持有的意愿，具备保值空间。",
-            f"邻近「{location_name}」可带动周边文教、培训及青年公寓等衍生商业形态，长线投资潜力深厚。"
+            f"邻近「{location_name}」可带动周边文教、培训及青年公寓等衍生商业形态，长线投资潜力深厚。",
+            f"作为重要教育节点，「{location_name}」为地块注入了强劲的学区溢价能力，抗风险属性极佳。",
+            f"围绕「{location_name}」的教研刚需，极其适合布局针对学生群体与陪读家庭的中高端租赁物业。"
         ],
         "live": [
             f"「{location_name}」的存在显著优化了地块的生活便利度与社区配套，是提升区内物业溢价的关键。",
             f"充沛的商业与民生配套（如「{location_name}」）大幅增强该地段的宜居属性，支撑周边租金回报。",
-            f"凭借「{location_name}」强劲的区域消费吸附力，可为混合型商业地产开发提供稳定的人流保障。"
+            f"凭借「{location_name}」强劲的区域消费吸附力，可为混合型商业地产开发提供稳定的人流保障。",
+            f"「{location_name}」极大丰富了周边的消费与生活场景，是吸引中产阶级入驻的核心卖点。",
+            f"紧邻「{location_name}」使得该地块具备极高的生活机能指数，有效降低未来周边物业的空置率。"
         ],
         "work": [
             f"依托「{location_name}」带来的庞大流动人口，具备极强的客群辐射能力，适合布局高溢价商业配套。",
             f"「{location_name}」强大的通勤赋能显著缩短跨区时间成本，是吸引高净值白领阶层进驻的绝对优势。",
-            f"交通枢纽如「{location_name}」向来是TOD开发的核心，赋予地块无可替代的商业流动性。"
+            f"交通枢纽如「{location_name}」向来是TOD导向型开发的核心，赋予地块无可替代的商业流动性。",
+            f"围绕「{location_name}」的密集客流，极度适合开发青年共居空间、服务式公寓或混合型商务大厦。",
+            f"「{location_name}」不仅是交通节点，更是商业价值转换器，为周边物业带来极高的升值潜力。"
         ]
     }
     return random.choice(pools.get(category, pools["live"]))
 
 def generate_ai_report(address, poi_data, official_name):
     system_prompt = """
-    你是一位专业的香港地产开发顾问。请根据提供的客观地块属性（周边设施），进行评估。
+    你是一位专业的香港地产开发顾问。请根据提供的客观地块属性（周边设施），进行初步评估。
     
     【输出格式绝对要求】：
-    你必须且只能按照以下格式输出，分为三部分，中间用“===”隔开：
+    你必须且只能按照以下格式输出，分为两部分，中间用“===”隔开：
     
-    核心建议用途：（请用一句话，10个字以内总结）
+    核心建议用途：（请用一句话，10个字以内总结。注意：必须根据该地段特性推断）
     ===
-    居住潜力指数：XX
-    商务潜力指数：XX
-    教育潜力指数：XX
-    ===
-    ### 📊 核心区位研判
-    - （利用列点方式说明，句子务必精简）
-    - （每点不超过20个字）
-    
-    ### 🚉 交通与生活机能
-    - （点出最核心的车站或商场优势）
-    - （点出生活机能的辐射范围）
-    
-    ### 💰 区域市场估算
-    - **平均尺价预计**：HK$ XX,XXX - XX,XXX
-    - **租金回报预计**：约 X.X%
-    
-    ### 💡 开发潜力建议
-    - （提供一项具体的商业开发建议）
-    - （提供一项相关的目标客群建议）
+    1. 【核心区位研判】：根据地理位置判断开发的基础条件。
+    2. 【交通与生活机能】：客观描述提供的数据，必须提及具体的车站或商场名称。
+    3. 【区域市场行情估算】：基于历史大数据的宏观估算，提取该大区的「历史平均尺价区间估算」与「租金回报率水平参考」。
+    4. 【开发潜力建议】：推测适合发展的物业类型并给出具体商业建议。
     
     【纪律要求】：
-    1. 第三部分的报告必须全面使用 Markdown 排版（- 列表格式）。
-    2. 严禁出现一大片密密麻麻的文字墙。
-    3. 第二部分的指数必须是 0 到 100 之间的数字。
+    - 严禁使用任何表情符号。
+    - 必须基于真实数据，没有的设施请明确说明。
     """
-    
     user_prompt = f"目标地块：{official_name}\n\n周边设施名单：\n"
-    for key, items_dict in poi_data.items():
-        names = list(items_dict.keys())
-        names_str = "、".join(names) if names else "无"
-        user_prompt += f"- {key} (共 {len(names)} 项): {names_str}\n"
+    for key, items in poi_data.items():
+        names_str = "、".join(items) if items else "无"
+        user_prompt += f"- {key} (共 {len(items)} 项): {names_str}\n"
         
     try:
         response = client.chat.completions.create(
@@ -341,53 +263,52 @@ def generate_ai_report(address, poi_data, official_name):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.4 
+            temperature=0.6 
         )
         result_text = response.choices[0].message.content
-        
-        parts = result_text.split("===")
-        rec_use = "综合潜力开发区"
-        scores = {'live': 60, 'work': 60, 'edu': 60}
-        report = result_text
-        
-        if len(parts) >= 3:
-            rec_use = parts[0].replace("核心建议用途：", "").strip()
-            live_m = re.search(r'居住.*?(\d+)', parts[1])
-            work_m = re.search(r'商务.*?(\d+)', parts[1])
-            edu_m = re.search(r'教育.*?(\d+)', parts[1])
-            if live_m: scores['live'] = int(live_m.group(1))
-            if work_m: scores['work'] = int(work_m.group(1))
-            if edu_m: scores['edu'] = int(edu_m.group(1))
-            report = parts[2].strip()
-            
-        return rec_use, scores, report
+        if "===" in result_text:
+            rec_use, full_report = result_text.split("===", 1)
+            rec_use = rec_use.replace("核心建议用途：", "").strip()
+            return rec_use, full_report.strip()
+        else:
+            return "综合潜力开发区", result_text.strip()
     except Exception as e:
-        return "系统连线异常", {'live': 0, 'work': 0, 'edu': 0}, f"AI API 连线失败：\n\n`{str(e)}`"
+        return "系统连线异常", f"AI API 连线失败，真实错误讯息如下：\n\n`{str(e)}`"
 
 def format_hover_text(items):
-    names = list(items.keys())
-    if not names: return "无数据"
-    display_items = names[:8]
+    if not items: 
+        return "无数据"
+    
+    display_items = items[:8]
     chunks = ["、".join(display_items[i:i+2]) for i in range(0, len(display_items), 2)]
     hover_str = "<br>".join(chunks)
-    if len(names) > 8: hover_str += f"<br><br><i>...等共 {len(names)} 项 (详见下方)</i>"
+    
+    if len(items) > 8:
+        hover_str += f"<br><br><i>...等共 {len(items)} 项 (详见下方折叠面板)</i>"
+        
     return hover_str
 
 RECOMMENDATIONS = {
     "教育学区 (适合学习)": [
         {"name": "九龙塘 (Kowloon Tong)", "price": "HK$ 20,000 - 35,000 / 呎", "desc": "名校网络密集，适合高阶学区房及高端学生公寓开发。"},
         {"name": "何文田 (Ho Man Tin)", "price": "HK$ 18,000 - 28,000 / 呎", "desc": "传统名校网，高净值家庭客群密集，抗跌能力极强。"},
-        {"name": "沙田 (Sha Tin)", "price": "HK$ 13,000 - 19,000 / 呎", "desc": "邻近多所高等院校，青年生活圈成熟，适合中端住宅布局。"}
+        {"name": "沙田 (Sha Tin)", "price": "HK$ 13,000 - 19,000 / 呎", "desc": "邻近多所高等院校，青年生活圈成熟，适合中端住宅布局。"},
+        {"name": "薄扶林 (Pok Fu Lam)", "price": "HK$ 20,000 - 32,000 / 呎", "desc": "毗邻香港大学，学术氛围浓厚，适合高端家庭与教职员住宅。"},
+        {"name": "红磡 (Hung Hom)", "price": "HK$ 15,000 - 22,000 / 呎", "desc": "近理大与城大，内地留学生租房热点，极适合投资青年公寓。"}
     ],
     "成熟商圈 (适合生活)": [
         {"name": "铜锣湾 (Causeway Bay)", "price": "HK$ 22,000 - 35,000 / 呎", "desc": "极高商业价值，适合商住混合体及高端零售综合体。"},
         {"name": "旺角 (Mong Kok)", "price": "HK$ 15,000 - 23,000 / 呎", "desc": "核心消费区，人流极旺，适合青年共居与潮流商业。"},
-        {"name": "元朗 (Yuen Long)", "price": "HK$ 11,000 - 16,000 / 呎", "desc": "新界西核心生活圈，民生消费力强劲，大型屋苑首选。"}
+        {"name": "元朗 (Yuen Long)", "price": "HK$ 11,000 - 16,000 / 呎", "desc": "新界西核心生活圈，民生消费力强劲，大型屋苑首选。"},
+        {"name": "荃湾 (Tsuen Wan)", "price": "HK$ 13,000 - 18,000 / 呎", "desc": "交通枢纽与大型商场林立，配套完善，深受中产家庭青睐。"},
+        {"name": "将军澳 (Tseung Kwan O)", "price": "HK$ 14,000 - 20,000 / 呎", "desc": "新兴中产社区，天桥网络与商场相连，极具生活便利性。"}
     ],
     "核心商务 (适合工作)": [
         {"name": "中环 (Central)", "price": "HK$ 30,000 - 50,000 / 呎", "desc": "顶级金融中心，适合甲级商厦与高端服务式公寓。"},
         {"name": "观塘 (Kwun Tong)", "price": "HK$ 12,000 - 18,000 / 呎", "desc": "CBD2 核心，商贸转型区，商务大厦升值潜力巨大。"},
-        {"name": "鲗鱼涌 (Quarry Bay)", "price": "HK$ 16,000 - 24,000 / 呎", "desc": "港岛东商业枢纽，高薪白领聚集地，长租公寓需求旺盛。"}
+        {"name": "鲗鱼涌 (Quarry Bay)", "price": "HK$ 16,000 - 24,000 / 呎", "desc": "港岛东商业枢纽，高薪白领聚集地，长租公寓需求旺盛。"},
+        {"name": "金钟 (Admiralty)", "price": "HK$ 28,000 - 45,000 / 呎", "desc": "政商交汇处，交通四通八达，适合顶级企业总部及高端配套。"},
+        {"name": "九龙湾 (Kowloon Bay)", "price": "HK$ 11,000 - 16,000 / 呎", "desc": "东九龙核心商业区扩展地带，租金回报稳定，适合新兴企业入驻。"}
     ]
 }
 
@@ -459,8 +380,8 @@ if start_btn and target_address:
         show_error("获取周边设施数据失败。开源节点响应超时，请稍后再试或缩小搜寻半径。")
         st.stop()
 
-    with st.spinner("AI 商业大脑正在深度推演各类潜力指数..."):
-        rec_use, scores, report = generate_ai_report(target_address, poi_data, official_name)
+    with st.spinner("AI 商业大脑正在研判最适开发定位..."):
+        rec_use, report = generate_ai_report(target_address, poi_data, official_name)
 
     st.markdown(f"""
         <div class="recommendation-card">
@@ -469,52 +390,27 @@ if start_btn and target_address:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🎯 AI 潜力雷达评分")
-    col_s1, col_s2, col_s3 = st.columns(3)
-    with col_s1:
-        st.metric("🏡 居住宜居度", f"{scores['live']} / 100")
-        st.progress(scores['live'] / 100)
-    with col_s2:
-        st.metric("💼 商务发展度", f"{scores['work']} / 100")
-        st.progress(scores['work'] / 100)
-    with col_s3:
-        st.metric("📚 教育配套度", f"{scores['edu']} / 100")
-        st.progress(scores['edu'] / 100)
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    st.markdown("### 🗺️ 区域空间数据视图 (实景打点)")
+    st.markdown("### 区域空间数据视图")
     col_map, col_chart = st.columns([1, 1])
     
     with col_map:
         m = folium.Map(location=[lat, lon], zoom_start=14, tiles="CartoDB positron")
         
         folium.CircleMarker(
-            location=[lat, lon], radius=8, popup=official_name,
-            color="#FFFFFF", weight=2, fill=True, fill_color="#1D4ED8", fill_opacity=1
+            location=[lat, lon],
+            radius=8,
+            popup=official_name,
+            color="#FFFFFF",      
+            weight=2,
+            fill=True,
+            fill_color="#1D4ED8", 
+            fill_opacity=1
         ).add_to(m)
         
         folium.Circle(
             radius=search_radius, location=[lat, lon],
             color="#3B82F6", fill=True, fill_color="#3B82F6", fill_opacity=0.1
         ).add_to(m)
-        
-        color_map = {
-            "地铁与铁路站": "#EF4444", 
-            "学校与教育机构": "#10B981", 
-            "医院与医疗设施": "#8B5CF6", 
-            "购物商场": "#F59E0B"     
-        }
-        
-        for category, items_dict in poi_data.items():
-            for name, coords in items_dict.items():
-                folium.CircleMarker(
-                    location=[coords[0], coords[1]],
-                    radius=5,
-                    popup=f"{category}: {name}",
-                    color="#FFFFFF", weight=1,
-                    fill=True, fill_color=color_map[category], fill_opacity=0.9
-                ).add_to(m)
-                
         st_folium(m, width=600, height=380, returned_objects=[])
 
     with col_chart:
@@ -534,6 +430,7 @@ if start_btn and target_address:
             chart_data, x="分类", y="数量", text="数量", custom_data=["清单"],
             color_discrete_sequence=["#3B82F6"]
         )
+        # --- 【修复核心】：设置 fixedrange=True 与 dragmode=False 以禁止拖拉与缩放 ---
         fig.update_traces(
             textposition='outside', textfont_size=16, textfont_color="#1E293B",
             hovertemplate="<b>%{x}</b><br>总数: %{y}<br><br><b>设施明细:</b><br>%{customdata[0]}<extra></extra>",
@@ -542,13 +439,20 @@ if start_btn and target_address:
         fig.update_layout(
             xaxis_title=None, yaxis_title=None, showlegend=False,
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=20, b=0),
-            xaxis=dict(tickangle=0, tickfont=dict(size=14, color="#64748B"), showline=True, linecolor='#E2E8F0', fixedrange=True),
-            yaxis=dict(showgrid=True, gridcolor="#F1F5F9", zeroline=True, zerolinecolor="#E2E8F0", fixedrange=True),
-            height=380, dragmode=False
+            xaxis=dict(
+                tickangle=0, tickfont=dict(size=14, color="#64748B"), showline=True, linecolor='#E2E8F0',
+                fixedrange=True # 锁定 X 轴缩放
+            ),
+            yaxis=dict(
+                showgrid=True, gridcolor="#F1F5F9", zeroline=True, zerolinecolor="#E2E8F0",
+                fixedrange=True # 锁定 Y 轴缩放
+            ),
+            height=380,
+            dragmode=False # 全局禁用拖拽模式
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    st.markdown("### 🧩 细分客群价值拆解 (附周边预估尺价)")
+    st.markdown("### 细分客群价值拆解 (附周边预估尺价)")
     st.markdown("点击下方分类标签，深入查看各具体设施与其带动的周边物业估值。")
     
     tab_edu, tab_live, tab_work = st.tabs(["[教育客群] 学区价值", "[生活客群] 宜居价值", "[通勤客群] 商务价值"])
@@ -556,7 +460,7 @@ if start_btn and target_address:
     with tab_edu:
         st.markdown("<br>", unsafe_allow_html=True)
         if poi_data['学校与教育机构']:
-            for item in poi_data['学校与教育机构'].keys():
+            for item in poi_data['学校与教育机构']:
                 with st.expander(f"设施名称：{item}"):
                     price = get_mock_price(item)
                     analysis = get_dynamic_analysis(item, "edu")
@@ -567,7 +471,7 @@ if start_btn and target_address:
             
     with tab_live:
         st.markdown("<br>", unsafe_allow_html=True)
-        live_items = list(poi_data['购物商场'].keys()) + list(poi_data['医院与医疗设施'].keys())
+        live_items = poi_data['购物商场'] + poi_data['医院与医疗设施']
         if live_items:
             for item in live_items:
                 with st.expander(f"设施名称：{item}"):
@@ -581,7 +485,7 @@ if start_btn and target_address:
     with tab_work:
         st.markdown("<br>", unsafe_allow_html=True)
         if poi_data['地铁与铁路站']:
-            for item in poi_data['地铁与铁路站'].keys():
+            for item in poi_data['地铁与铁路站']:
                 with st.expander(f"枢纽名称：{item}"):
                     price = get_mock_price(item)
                     analysis = get_dynamic_analysis(item, "work")
@@ -591,7 +495,7 @@ if start_btn and target_address:
             st.info("该目标半径内暂无抓取到轨道交通枢纽数据。")
 
     st.markdown("---")
-    st.markdown("### 📑 AI 商业潜力深度报告")
+    st.markdown("### AI 商业潜力深度报告")
     st.markdown(f'<div class="report-card">{report}</div>', unsafe_allow_html=True)
     
     st.download_button(
