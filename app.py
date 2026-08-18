@@ -10,9 +10,9 @@ import random
 import re
 
 # ==========================================
-# 1. 頁面設定與精準 CSS
+# 1. 页面设定与精准 CSS
 # ==========================================
-st.set_page_config(page_title="智能地塊潛力分析", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="智能地块潜力分析", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -112,11 +112,10 @@ ZHIPU_API_KEY = "2040bad6a4de457db8783082ea9120bc.FDSw7nPPtfv8KCaD"
 client = ZhipuAI(api_key=ZHIPU_API_KEY)
 
 # ==========================================
-# 2. 數據處理與動態生成引擎
+# 2. 数据处理与动态生成引擎
 # ==========================================
 @st.cache_data(ttl=86400)
 def get_coordinates(address):
-    # 內置簡繁體詞庫，確保 0 毫秒穩定極速定位
     demo_locations = {
         "九龙塘": (22.3372, 114.1752), "九龍塘": (22.3372, 114.1752), "Kowloon Tong": (22.3372, 114.1752),
         "何文田": (22.3160, 114.1795), "Ho Man Tin": (22.3160, 114.1795),
@@ -134,7 +133,10 @@ def get_coordinates(address):
         "金钟": (22.2796, 114.1655), "金鐘": (22.2796, 114.1655), "Admiralty": (22.2796, 114.1655),
         "九龙湾": (22.3234, 114.2104), "九龍灣": (22.3234, 114.2104), "Kowloon Bay": (22.3234, 114.2104),
         "乌溪沙": (22.4276, 114.2443), "烏溪沙": (22.4276, 114.2443), "Wu Kai Sha": (22.4276, 114.2443),
-        "迪士尼": (22.3129, 114.0412), "Disneyland": (22.3129, 114.0412)
+        "迪士尼": (22.3129, 114.0412), "Disneyland": (22.3129, 114.0412),
+        "海洋公园": (22.2460, 114.1749), "海洋公園": (22.2460, 114.1749), "Ocean Park": (22.2460, 114.1749),
+        "科学园": (22.4277, 114.2123), "科學園": (22.4277, 114.2123), "Science Park": (22.4277, 114.2123),
+        "数码港": (22.2599, 114.1311), "數碼港": (22.2599, 114.1311), "Cyberport": (22.2599, 114.1311)
     }
 
     clean_address = address.replace(" ", "").replace("站", "").replace("香港", "")
@@ -179,7 +181,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/14.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/15.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -211,7 +213,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out center tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/14.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/15.0"}
     poi_details = {"地鐵與鐵路站": {}, "學校與教育機構": {}, "醫院與醫療設施": {}, "購物商場": {}}
     
     for url in overpass_endpoints:
@@ -221,7 +223,7 @@ def fetch_poi_data(lat, lon, radius=1000):
                 data = response.json()
                 for element in data.get('elements', []):
                     tags = element.get('tags', {})
-                    name = tags.get('name:zh', tags.get('name', '未命名設施'))
+                    name = tags.get('name:zh', tags.get('name', '未命名设施'))
                     if name == '未命名设施' or name == '未命名設施': continue
                     
                     p_lat = element.get('lat', element.get('center', {}).get('lat'))
@@ -279,40 +281,41 @@ def get_dynamic_analysis(location_name, category):
     return random.choice(pools.get(category, pools["live"]))
 
 def generate_ai_report(address, poi_data, official_name):
+    # 核心修復：強制要求產生豐滿的列表點，確保排版與深度兼具
     system_prompt = """
-    你是一位專業的香港地產開發顧問。請根據提供的客觀地塊屬性（周邊設施），進行評估。
+    你是一位專業的香港地產開發顧問。請根據提供的客觀地塊屬性（周邊設施），進行深度商業評估。
     
     【輸出格式絕對要求】：
     你必須且只能按照以下格式輸出，分為三部分，中間用“===”隔開。
     ！！請務必使用繁體中文（Traditional Chinese）回答！！
     
-    核心建議用途：（請用一句話，10個字以內總結）
+    核心建議用途：（請用一句話，15個字以內總結）
     ===
     居住潛力指數：XX
     商務潛力指數：XX
     教育潛力指數：XX
     ===
-    核心區位研判
-    - （利用列點方式說明，句子務必精簡）
-    - （每點不超過20個字）
+    ### 📊 核心區位研判
+    - （請提供第一點深度分析，結合具體地理位置或設施說明，約30-50字）
+    - （請提供第二點深度分析，結合具體地理位置或設施說明，約30-50字）
     
-    交通與生活機能
-    - （點出最核心的車站或商場優勢）
-    - （點出生活機能的輻射範圍）
+    ### 🚉 交通與生活機能
+    - （請具體點出最核心的車站或商場，並分析其帶來的流動人口優勢，約30-50字）
+    - （請分析周邊生活機能的輻射範圍及對物業溢價的影響，約30-50字）
     
-    區域市場估算
+    ### 💰 區域市場估算
     - **平均呎價預計**：HK$ XX,XXX - XX,XXX
     - **租金回報預計**：約 X.X%
     
-    開發潛力建議
-    - （提供一項具體的商業開發建議）
-    - （提供一項相關的目標客群建議）
+    ### 💡 開發潛力建議
+    - （請提供一項具體的商業開發或住宅規劃建議，約30-50字）
+    - （請提供一項針對目標客群的精準營銷建議，約30-50字）
     
     【紀律要求】：
-    1. 第三部分的報告必須全面使用 Markdown 排版（- 列表格式）。
-    2. 一个点20字左右。
-    3. 第二部分的指數必須是 0 到 100 之間的數字。
-    4. 必須使用繁體中文輸出。
+    1. 第三部分的報告必須嚴格使用 Markdown 的 ### 標題與 - 列表格式，層次分明。
+    2. 每個 bullet point (-) 請寫一段完整的句子（約 30-50 字），內容需具體豐富，不要只寫幾個單詞！
+    3. 第二部分的指數必須是 0 到 100 之間的純數字。
+    4. 全文必須使用繁體中文。
     """
     
     user_prompt = f"目標地塊：{official_name}\n\n周邊設施名單：\n"
@@ -328,7 +331,7 @@ def generate_ai_report(address, poi_data, official_name):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.4 
+            temperature=0.6 
         )
         result_text = response.choices[0].message.content
         
@@ -446,7 +449,7 @@ if start_btn and target_address:
         show_error("獲取周邊設施數據失敗。開源節點響應超時，請稍後再試或縮小搜尋半徑。")
         st.stop()
 
-    with st.spinner("正在深度推演各類潛力指數..."):
+    with st.spinner("AI 商業大腦正在深度推演各類潛力指數..."):
         rec_use, scores, report = generate_ai_report(target_address, poi_data, official_name)
 
     st.markdown(f"""
@@ -456,20 +459,20 @@ if start_btn and target_address:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### AI 潛力雷達評分")
+    st.markdown("### 🎯 AI 潛力雷達評分")
     col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
-        st.metric("居住宜居度", f"{scores['live']} / 100")
+        st.metric("🏡 居住宜居度", f"{scores['live']} / 100")
         st.progress(scores['live'] / 100)
     with col_s2:
-        st.metric("商務發展度", f"{scores['work']} / 100")
+        st.metric("💼 商務發展度", f"{scores['work']} / 100")
         st.progress(scores['work'] / 100)
     with col_s3:
-        st.metric("教育配套度", f"{scores['edu']} / 100")
+        st.metric("📚 教育配套度", f"{scores['edu']} / 100")
         st.progress(scores['edu'] / 100)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("### 區域空間數據視圖")
+    st.markdown("### 🗺️ 區域空間數據視圖 (實景打點)")
     col_map, col_chart = st.columns([1, 1])
     
     with col_map:
@@ -535,7 +538,7 @@ if start_btn and target_address:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    st.markdown("### 細分客群價值拆解 (附周邊預估呎價)")
+    st.markdown("### 🧩 細分客群價值拆解 (附周邊預估呎價)")
     st.markdown("點擊下方分類標籤，深入查看各具體設施與其帶動的周邊物業估值。")
     
     tab_edu, tab_live, tab_work = st.tabs(["[教育客群] 學區價值", "[生活客群] 宜居價值", "[通勤客群] 商務價值"])
@@ -578,8 +581,10 @@ if start_btn and target_address:
             st.info("該目標半徑內暫無抓取到軌道交通樞紐數據。")
 
     st.markdown("---")
-    st.markdown("### AI 商業潛力深度報告")
-    st.markdown(f'<div class="report-card">{report}</div>', unsafe_allow_html=True)
+    st.markdown("### 📑 AI 商業潛力深度報告")
+    
+    # 核心修復：使用空白行確保 Streamlit 正確渲染 Markdown 的列表與排版
+    st.markdown(f'<div class="report-card">\n\n{report}\n\n</div>', unsafe_allow_html=True)
     
     st.download_button(
         label="導出完整商業報告文檔 (TXT)",
