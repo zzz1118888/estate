@@ -326,6 +326,7 @@ def generate_ai_report(address, poi_data, official_name):
     2. 每個 bullet point (-) 請寫一段完整的句子（約 30-50 字），內容需具體豐富，不要只寫幾個單詞！
     3. 第二部分的指數必須是 0 到 100 之間的純數字。
     4. 全文必須使用繁體中文。
+    5，不要有任何emoji。
     """
     
     user_prompt = f"目標地塊：{official_name}\n\n周邊設施名單：\n"
@@ -469,20 +470,20 @@ if start_btn and target_address:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🎯 AI 潛力雷達評分")
+    st.markdown("### AI 潛力雷達評分")
     col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
-        st.metric("🏡 居住宜居度", f"{scores['live']} / 100")
+        st.metric("居住宜居度", f"{scores['live']} / 100")
         st.progress(scores['live'] / 100)
     with col_s2:
-        st.metric("💼 商務發展度", f"{scores['work']} / 100")
+        st.metric("商務發展度", f"{scores['work']} / 100")
         st.progress(scores['work'] / 100)
     with col_s3:
-        st.metric("📚 教育配套度", f"{scores['edu']} / 100")
+        st.metric("教育配套度", f"{scores['edu']} / 100")
         st.progress(scores['edu'] / 100)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("### 🗺️ 區域空間數據視圖 (實景打點)")
+    st.markdown("### 區域空間數據視圖 (實景打點)")
     col_map, col_chart = st.columns([1, 1])
     
     with col_map:
@@ -548,7 +549,7 @@ if start_btn and target_address:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    st.markdown("### 🧩 細分客群價值拆解 (附周邊預估呎價)")
+    st.markdown("### 細分客群價值拆解 (附周邊預估呎價)")
     st.markdown("點擊下方分類標籤，深入查看各具體設施與其帶動的周邊物業估值。")
     
     tab_edu, tab_live, tab_work = st.tabs(["[教育客群] 學區價值", "[生活客群] 宜居價值", "[通勤客群] 商務價值"])
@@ -591,7 +592,7 @@ if start_btn and target_address:
             st.info("該目標半徑內暫無抓取到軌道交通樞紐數據。")
 
     st.markdown("---")
-    st.markdown("### 📑 AI 商業潛力深度報告")
+    st.markdown("### AI 商業潛力深度報告")
     
     st.markdown(f'<div class="report-card">\n\n{report}\n\n</div>', unsafe_allow_html=True)
     
