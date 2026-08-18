@@ -295,19 +295,19 @@ def generate_ai_report(address, poi_data, official_name):
     商務潛力指數：XX
     教育潛力指數：XX
     ===
-    ### 📊 核心區位研判
+    ### 核心區位研判
     - （請提供第一點深度分析，結合具體地理位置或設施說明，約30-50字）
     - （請提供第二點深度分析，結合具體地理位置或設施說明，約30-50字）
     
-    ### 🚉 交通與生活機能
+    ### 交通與生活機能
     - （請具體點出最核心的車站或商場，並分析其帶來的流動人口優勢，約30-50字）
     - （請分析周邊生活機能的輻射範圍及對物業溢價的影響，約30-50字）
     
-    ### 💰 區域市場估算
+    ### 區域市場估算
     - **平均呎價預計**：HK$ XX,XXX - XX,XXX
     - **租金回報預計**：約 X.X%
     
-    ### 💡 開發潛力建議
+    ### 開發潛力建議
     - （請提供一項具體的商業開發或住宅規劃建議，約30-50字）
     - （請提供一項針對目標客群的精準營銷建議，約30-50字）
     
@@ -316,6 +316,7 @@ def generate_ai_report(address, poi_data, official_name):
     2. 每個 bullet point (-) 請寫一段完整的句子（約 30-50 字），內容需具體豐富，不要只寫幾個單詞！
     3. 第二部分的指數必須是 0 到 100 之間的純數字。
     4. 全文必須使用繁體中文。
+    5. 不准有任何emoji
     """
     
     user_prompt = f"目標地塊：{official_name}\n\n周邊設施名單：\n"
@@ -459,20 +460,20 @@ if start_btn and target_address:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🎯 AI 潛力雷達評分")
+    st.markdown("### AI 潛力雷達評分")
     col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
-        st.metric("🏡 居住宜居度", f"{scores['live']} / 100")
+        st.metric("居住宜居度", f"{scores['live']} / 100")
         st.progress(scores['live'] / 100)
     with col_s2:
-        st.metric("💼 商務發展度", f"{scores['work']} / 100")
+        st.metric("商務發展度", f"{scores['work']} / 100")
         st.progress(scores['work'] / 100)
     with col_s3:
-        st.metric("📚 教育配套度", f"{scores['edu']} / 100")
+        st.metric("教育配套度", f"{scores['edu']} / 100")
         st.progress(scores['edu'] / 100)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("### 🗺️ 區域空間數據視圖 (實景打點)")
+    st.markdown("### 區域空間數據視圖 (實景打點)")
     col_map, col_chart = st.columns([1, 1])
     
     with col_map:
