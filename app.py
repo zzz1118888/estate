@@ -18,16 +18,71 @@ st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* 保持 header 可見，以便喚出左側邊欄 */
     
-    [data-testid="stAppViewContainer"] { background-color: #F8FAFC; }
+    /* 整個主背景強制淺色 */
+    [data-testid="stAppViewContainer"] { background-color: #F8FAFC !important; }
+    
+    /* ==========================================
+       【終極防禦】：全面狙擊 Dark Mode 的白字現象
+       強制主畫面的文字全部為深色，無視系統主題
+       ========================================== */
+    
+    /* 1. 主畫面：強制所有普通文字變成深色 */
+    [data-testid="stMainBlock"] .stMarkdown p, 
+    [data-testid="stMainBlock"] .stMarkdown li, 
+    [data-testid="stMainBlock"] .stMarkdown span {
+        color: #334155 !important;
+    }
+    
+    /* 2. 主畫面標題 */
+    [data-testid="stMainBlock"] .stMarkdown h1, 
+    [data-testid="stMainBlock"] .stMarkdown h2, 
+    [data-testid="stMainBlock"] .stMarkdown h3 {
+        color: #1E293B !important;
+    }
+    
+    /* 3. Tabs 標籤文字 */
+    button[data-baseweb="tab"] p, 
+    button[data-baseweb="tab"] span {
+        color: #1E293B !important;
+        font-weight: 600 !important;
+    }
+    
+    /* 4. Expander (折疊面板) 標題與內容 */
+    [data-testid="stExpander"] summary p, 
+    [data-testid="stExpander"] summary span {
+        color: #1E293B !important;
+        font-weight: bold !important;
+    }
+    [data-testid="stExpander"] div[role="region"] p {
+        color: #334155 !important;
+    }
+    
+    /* 5. Metrics 數據卡片 */
+    [data-testid="stMetricLabel"] p {
+        color: #475569 !important;
+    }
+    [data-testid="stMetricValue"] div {
+        color: #0F172A !important;
+    }
+    
+    /* 6. 提示框 (st.info) */
+    .stAlert p {
+        color: #1E293B !important;
+    }
+    
+    /* ==========================================
+       側邊欄與特例保護 (必須維持白色或自定義顏色)
+       ========================================== */
     
     /* 側邊欄背景設定為深色 */
     [data-testid="stSidebar"] {
-        background-color: #0F172A;
+        background-color: #0F172A !important;
         padding-top: 2rem;
     }
     
+    /* 側邊欄文字必須是白色 */
     [data-testid="stSidebar"] .stMarkdown p,
     [data-testid="stSidebar"] .stMarkdown h1,
     [data-testid="stSidebar"] .stMarkdown h2,
@@ -37,61 +92,51 @@ st.markdown("""
         color: #F1F5F9 !important;
     }
     
-    [data-testid="stSidebar"] div.stButton > button {
+    /* 側邊欄的輸入框文字保持深色 */
+    [data-testid="stSidebar"] div[data-baseweb="input"] input,
+    [data-testid="stSidebar"] div[data-baseweb="select"] div {
+        color: #0F172A !important;
+    }
+    
+    /* 按鈕美化 */
+    div.stButton > button {
         background-color: #3B82F6 !important;
-        color: white !important;
         border-radius: 6px;
         height: 48px;
-        font-weight: bold;
         border: none;
         width: 100%;
         margin-top: 1rem;
     }
-    [data-testid="stSidebar"] div.stButton > button:hover {
+    div.stButton > button p {
+        color: #FFFFFF !important; /* 按鈕文字永遠白色 */
+        font-weight: bold !important;
+    }
+    div.stButton > button:hover {
         background-color: #2563EB !important;
     }
 
-    /* ==========================================
-       【核心修復】：解決 Dark Mode 下的「白底白字」隱形問題
-       強制主畫面的預設文字顏色為深藍色，無視系統主題
-       ========================================== */
-    [data-testid="stMainBlock"] .stMarkdown p,
-    [data-testid="stMainBlock"] .stMarkdown h1,
-    [data-testid="stMainBlock"] .stMarkdown h2,
-    [data-testid="stMainBlock"] .stMarkdown h3,
-    [data-testid="stMainBlock"] .stMarkdown li,
-    [data-testid="stTabs"] button p {
-        color: #1E293B !important;
-    }
-
+    /* 頂部深色數據卡片 (確保文字不會被覆蓋) */
     .recommendation-card {
         background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
         padding: 30px;
         border-radius: 12px;
-        color: white;
         text-align: center;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         margin-bottom: 2rem;
         border-bottom: 4px solid #3B82F6;
     }
     .recommendation-title {
-        font-size: 16px; color: #94A3B8; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase;
+        font-size: 16px; color: #94A3B8 !important; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase;
     }
     .recommendation-value {
-        font-size: 32px; font-weight: 800; color: #FFFFFF; letter-spacing: 1px;
+        font-size: 32px; font-weight: 800; color: #FFFFFF !important; letter-spacing: 1px;
     }
 
-    [data-testid="metric-container"] {
-        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;
-        padding: 20px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-    }
-    [data-testid="stMetricValue"] { font-size: 28px; color: #0F172A; font-weight: 800; }
-    
+    /* 報告與列表區塊 */
     .report-card {
         background-color: #FFFFFF; padding: 35px; border-radius: 12px; border-left: 6px solid #3B82F6;
-        font-size: 16px; line-height: 1.8; color: #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;
+        font-size: 16px; line-height: 1.8; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;
     }
-    
     .report-card h3 { font-size: 20px; color: #1E293B !important; margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; }
     .report-card ul { padding-left: 20px; margin-bottom: 20px; color: #334155 !important; }
     .report-card li { margin-bottom: 10px; color: #334155 !important; }
@@ -110,9 +155,6 @@ st.markdown("""
     .custom-alert-success {
         background-color: #F0FDF4; color: #166534 !important; padding: 16px; border-radius: 8px; border-left: 6px solid #22C55E; margin-bottom: 1rem; font-weight: 500;
     }
-    
-    .streamlit-expanderHeader { color: #1E293B !important; font-weight: 600; }
-    .streamlit-expanderContent { color: #334155 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -147,7 +189,10 @@ def get_coordinates(address):
         "金钟": (22.2796, 114.1655), "金鐘": (22.2796, 114.1655), "Admiralty": (22.2796, 114.1655),
         "九龙湾": (22.3234, 114.2104), "九龍灣": (22.3234, 114.2104), "Kowloon Bay": (22.3234, 114.2104),
         "乌溪沙": (22.4276, 114.2443), "烏溪沙": (22.4276, 114.2443), "Wu Kai Sha": (22.4276, 114.2443),
-        "迪士尼": (22.3129, 114.0412), "Disneyland": (22.3129, 114.0412)
+        "迪士尼": (22.3129, 114.0412), "Disneyland": (22.3129, 114.0412),
+        "海洋公园": (22.2460, 114.1749), "海洋公園": (22.2460, 114.1749), "Ocean Park": (22.2460, 114.1749),
+        "科学园": (22.4277, 114.2123), "科學園": (22.4277, 114.2123), "Science Park": (22.4277, 114.2123),
+        "数码港": (22.2599, 114.1311), "數碼港": (22.2599, 114.1311), "Cyberport": (22.2599, 114.1311)
     }
 
     clean_address = address.replace(" ", "").replace("站", "").replace("香港", "")
@@ -192,7 +237,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/16.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/18.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -224,7 +269,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out center tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/16.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/18.0"}
     poi_details = {"地鐵與鐵路站": {}, "學校與教育機構": {}, "醫院與醫療設施": {}, "購物商場": {}}
     
     for url in overpass_endpoints:
@@ -305,19 +350,19 @@ def generate_ai_report(address, poi_data, official_name):
     商務潛力指數：XX
     教育潛力指數：XX
     ===
-    ### 📊 核心區位研判
+    ### 核心區位研判
     - （請提供第一點深度分析，結合具體地理位置或設施說明，約30-50字）
     - （請提供第二點深度分析，結合具體地理位置或設施說明，約30-50字）
     
-    ### 🚉 交通與生活機能
+    ### 交通與生活機能
     - （請具體點出最核心的車站或商場，並分析其帶來的流動人口優勢，約30-50字）
     - （請分析周邊生活機能的輻射範圍及對物業溢價的影響，約30-50字）
     
-    ### 💰 區域市場估算
+    ### 區域市場估算
     - **平均呎價預計**：HK$ XX,XXX - XX,XXX
     - **租金回報預計**：約 X.X%
     
-    ### 💡 開發潛力建議
+    ### 開發潛力建議
     - （請提供一項具體的商業開發或住宅規劃建議，約30-50字）
     - （請提供一項針對目標客群的精準營銷建議，約30-50字）
     
@@ -325,8 +370,7 @@ def generate_ai_report(address, poi_data, official_name):
     1. 第三部分的報告必須嚴格使用 Markdown 的 ### 標題與 - 列表格式，層次分明。
     2. 每個 bullet point (-) 請寫一段完整的句子（約 30-50 字），內容需具體豐富，不要只寫幾個單詞！
     3. 第二部分的指數必須是 0 到 100 之間的純數字。
-    4. 全文必須使用繁體中文。
-    5，不要有任何emoji。
+    4. 全文必須使用繁體中文，且不要使用任何表情符號。
     """
     
     user_prompt = f"目標地塊：{official_name}\n\n周邊設施名單：\n"
@@ -483,7 +527,7 @@ if start_btn and target_address:
         st.progress(scores['edu'] / 100)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("### 區域空間數據視圖 (實景打點)")
+    st.markdown("### 區域空間數據視圖")
     col_map, col_chart = st.columns([1, 1])
     
     with col_map:
@@ -549,10 +593,10 @@ if start_btn and target_address:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    st.markdown("### 細分客群價值拆解 (附周邊預估呎價)")
+    st.markdown("### 細分客群價值拆解")
     st.markdown("點擊下方分類標籤，深入查看各具體設施與其帶動的周邊物業估值。")
     
-    tab_edu, tab_live, tab_work = st.tabs(["[教育客群] 學區價值", "[生活客群] 宜居價值", "[通勤客群] 商務價值"])
+    tab_edu, tab_live, tab_work = st.tabs(["學區價值", "宜居價值", "商務價值"])
     
     with tab_edu:
         st.markdown("<br>", unsafe_allow_html=True)
