@@ -292,19 +292,19 @@ def generate_ai_report(address, poi_data, official_name):
     商務潛力指數：XX
     教育潛力指數：XX
     ===
-    ### 📊 核心區位研判
+    ### 核心區位研判
     - （利用列點方式說明，句子務必精簡）
     - （每點不超過20個字）
     
-    ### 🚉 交通與生活機能
+    ### 交通與生活機能
     - （點出最核心的車站或商場優勢）
     - （點出生活機能的輻射範圍）
     
-    ### 💰 區域市場估算
+    ### 區域市場估算
     - **平均呎價預計**：HK$ XX,XXX - XX,XXX
     - **租金回報預計**：約 X.X%
     
-    ### 💡 開發潛力建議
+    ### 開發潛力建議
     - （提供一項具體的商業開發建議）
     - （提供一項相關的目標客群建議）
     
@@ -456,20 +456,20 @@ if start_btn and target_address:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🎯 AI 潛力雷達評分")
+    st.markdown("### AI 潛力雷達評分")
     col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
-        st.metric("🏡 居住宜居度", f"{scores['live']} / 100")
+        st.metric("居住宜居度", f"{scores['live']} / 100")
         st.progress(scores['live'] / 100)
     with col_s2:
-        st.metric("💼 商務發展度", f"{scores['work']} / 100")
+        st.metric("商務發展度", f"{scores['work']} / 100")
         st.progress(scores['work'] / 100)
     with col_s3:
-        st.metric("📚 教育配套度", f"{scores['edu']} / 100")
+        st.metric("教育配套度", f"{scores['edu']} / 100")
         st.progress(scores['edu'] / 100)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("### 🗺️ 區域空間數據視圖 (實景打點)")
+    st.markdown("### 區域空間數據視圖")
     col_map, col_chart = st.columns([1, 1])
     
     with col_map:
