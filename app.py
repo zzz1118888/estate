@@ -10,9 +10,9 @@ import random
 import re
 
 # ==========================================
-# 1. 页面设定与精准 CSS
+# 1. 頁面設定與精準 CSS
 # ==========================================
-st.set_page_config(page_title="智能地块潜力分析", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="智能地塊潛力分析", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -22,6 +22,7 @@ st.markdown("""
     
     [data-testid="stAppViewContainer"] { background-color: #F8FAFC; }
     
+    /* 側邊欄背景設定為深色 */
     [data-testid="stSidebar"] {
         background-color: #0F172A;
         padding-top: 2rem;
@@ -48,6 +49,19 @@ st.markdown("""
     }
     [data-testid="stSidebar"] div.stButton > button:hover {
         background-color: #2563EB !important;
+    }
+
+    /* ==========================================
+       【核心修復】：解決 Dark Mode 下的「白底白字」隱形問題
+       強制主畫面的預設文字顏色為深藍色，無視系統主題
+       ========================================== */
+    [data-testid="stMainBlock"] .stMarkdown p,
+    [data-testid="stMainBlock"] .stMarkdown h1,
+    [data-testid="stMainBlock"] .stMarkdown h2,
+    [data-testid="stMainBlock"] .stMarkdown h3,
+    [data-testid="stMainBlock"] .stMarkdown li,
+    [data-testid="stTabs"] button p {
+        color: #1E293B !important;
     }
 
     .recommendation-card {
@@ -78,23 +92,23 @@ st.markdown("""
         font-size: 16px; line-height: 1.8; color: #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;
     }
     
-    .report-card h3 { font-size: 20px; color: #1E293B; margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; }
-    .report-card ul { padding-left: 20px; margin-bottom: 20px; }
-    .report-card li { margin-bottom: 10px; }
+    .report-card h3 { font-size: 20px; color: #1E293B !important; margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; }
+    .report-card ul { padding-left: 20px; margin-bottom: 20px; color: #334155 !important; }
+    .report-card li { margin-bottom: 10px; color: #334155 !important; }
     
     .rec-item-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px;
         margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #3B82F6;
     }
-    .rec-item-title { font-size: 18px; font-weight: bold; color: #0F172A; margin-bottom: 5px; }
-    .rec-item-price { font-size: 16px; color: #DC2626; font-weight: 600; margin-bottom: 10px; }
-    .rec-item-desc { font-size: 14px; color: #475569; }
+    .rec-item-title { font-size: 18px; font-weight: bold; color: #0F172A !important; margin-bottom: 5px; }
+    .rec-item-price { font-size: 16px; color: #DC2626 !important; font-weight: 600; margin-bottom: 10px; }
+    .rec-item-desc { font-size: 14px; color: #475569 !important; }
 
     .custom-alert-error {
-        background-color: #FEF2F2; color: #991B1B; padding: 16px; border-radius: 8px; border-left: 6px solid #EF4444; margin-bottom: 1rem; font-weight: 500;
+        background-color: #FEF2F2; color: #991B1B !important; padding: 16px; border-radius: 8px; border-left: 6px solid #EF4444; margin-bottom: 1rem; font-weight: 500;
     }
     .custom-alert-success {
-        background-color: #F0FDF4; color: #166534; padding: 16px; border-radius: 8px; border-left: 6px solid #22C55E; margin-bottom: 1rem; font-weight: 500;
+        background-color: #F0FDF4; color: #166534 !important; padding: 16px; border-radius: 8px; border-left: 6px solid #22C55E; margin-bottom: 1rem; font-weight: 500;
     }
     
     .streamlit-expanderHeader { color: #1E293B !important; font-weight: 600; }
@@ -112,7 +126,7 @@ ZHIPU_API_KEY = "2040bad6a4de457db8783082ea9120bc.FDSw7nPPtfv8KCaD"
 client = ZhipuAI(api_key=ZHIPU_API_KEY)
 
 # ==========================================
-# 2. 数据处理与动态生成引擎
+# 2. 數據處理與動態生成引擎
 # ==========================================
 @st.cache_data(ttl=86400)
 def get_coordinates(address):
@@ -133,10 +147,7 @@ def get_coordinates(address):
         "金钟": (22.2796, 114.1655), "金鐘": (22.2796, 114.1655), "Admiralty": (22.2796, 114.1655),
         "九龙湾": (22.3234, 114.2104), "九龍灣": (22.3234, 114.2104), "Kowloon Bay": (22.3234, 114.2104),
         "乌溪沙": (22.4276, 114.2443), "烏溪沙": (22.4276, 114.2443), "Wu Kai Sha": (22.4276, 114.2443),
-        "迪士尼": (22.3129, 114.0412), "Disneyland": (22.3129, 114.0412),
-        "海洋公园": (22.2460, 114.1749), "海洋公園": (22.2460, 114.1749), "Ocean Park": (22.2460, 114.1749),
-        "科学园": (22.4277, 114.2123), "科學園": (22.4277, 114.2123), "Science Park": (22.4277, 114.2123),
-        "数码港": (22.2599, 114.1311), "數碼港": (22.2599, 114.1311), "Cyberport": (22.2599, 114.1311)
+        "迪士尼": (22.3129, 114.0412), "Disneyland": (22.3129, 114.0412)
     }
 
     clean_address = address.replace(" ", "").replace("站", "").replace("香港", "")
@@ -181,7 +192,7 @@ def get_coordinates(address):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": f"{address}, Hong Kong", "format": "json", "limit": 1}
-        headers = {"User-Agent": "PropTech_Feasibility_App/15.0"}
+        headers = {"User-Agent": "PropTech_Feasibility_App/16.0"}
         res = requests.get(url, params=params, headers=headers, timeout=5)
         if res.status_code == 200 and len(res.json()) > 0:
             data = res.json()[0]
@@ -213,7 +224,7 @@ def fetch_poi_data(lat, lon, radius=1000):
     );
     out center tags;
     """
-    headers = {"User-Agent": "PropTech_Feasibility_App/15.0"}
+    headers = {"User-Agent": "PropTech_Feasibility_App/16.0"}
     poi_details = {"地鐵與鐵路站": {}, "學校與教育機構": {}, "醫院與醫療設施": {}, "購物商場": {}}
     
     for url in overpass_endpoints:
@@ -281,7 +292,6 @@ def get_dynamic_analysis(location_name, category):
     return random.choice(pools.get(category, pools["live"]))
 
 def generate_ai_report(address, poi_data, official_name):
-    # 核心修復：強制要求產生豐滿的列表點，確保排版與深度兼具
     system_prompt = """
     你是一位專業的香港地產開發顧問。請根據提供的客觀地塊屬性（周邊設施），進行深度商業評估。
     
@@ -295,19 +305,19 @@ def generate_ai_report(address, poi_data, official_name):
     商務潛力指數：XX
     教育潛力指數：XX
     ===
-    ### 核心區位研判
+    ### 📊 核心區位研判
     - （請提供第一點深度分析，結合具體地理位置或設施說明，約30-50字）
     - （請提供第二點深度分析，結合具體地理位置或設施說明，約30-50字）
     
-    ### 交通與生活機能
+    ### 🚉 交通與生活機能
     - （請具體點出最核心的車站或商場，並分析其帶來的流動人口優勢，約30-50字）
     - （請分析周邊生活機能的輻射範圍及對物業溢價的影響，約30-50字）
     
-    ### 區域市場估算
+    ### 💰 區域市場估算
     - **平均呎價預計**：HK$ XX,XXX - XX,XXX
     - **租金回報預計**：約 X.X%
     
-    ### 開發潛力建議
+    ### 💡 開發潛力建議
     - （請提供一項具體的商業開發或住宅規劃建議，約30-50字）
     - （請提供一項針對目標客群的精準營銷建議，約30-50字）
     
@@ -316,7 +326,6 @@ def generate_ai_report(address, poi_data, official_name):
     2. 每個 bullet point (-) 請寫一段完整的句子（約 30-50 字），內容需具體豐富，不要只寫幾個單詞！
     3. 第二部分的指數必須是 0 到 100 之間的純數字。
     4. 全文必須使用繁體中文。
-    5. 不准有任何emoji
     """
     
     user_prompt = f"目標地塊：{official_name}\n\n周邊設施名單：\n"
@@ -460,20 +469,20 @@ if start_btn and target_address:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### AI 潛力雷達評分")
+    st.markdown("### 🎯 AI 潛力雷達評分")
     col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
-        st.metric("居住宜居度", f"{scores['live']} / 100")
+        st.metric("🏡 居住宜居度", f"{scores['live']} / 100")
         st.progress(scores['live'] / 100)
     with col_s2:
-        st.metric("商務發展度", f"{scores['work']} / 100")
+        st.metric("💼 商務發展度", f"{scores['work']} / 100")
         st.progress(scores['work'] / 100)
     with col_s3:
-        st.metric("教育配套度", f"{scores['edu']} / 100")
+        st.metric("📚 教育配套度", f"{scores['edu']} / 100")
         st.progress(scores['edu'] / 100)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("### 區域空間數據視圖 (實景打點)")
+    st.markdown("### 🗺️ 區域空間數據視圖 (實景打點)")
     col_map, col_chart = st.columns([1, 1])
     
     with col_map:
@@ -582,9 +591,8 @@ if start_btn and target_address:
             st.info("該目標半徑內暫無抓取到軌道交通樞紐數據。")
 
     st.markdown("---")
-    st.markdown("### AI 商業潛力深度報告")
+    st.markdown("### 📑 AI 商業潛力深度報告")
     
-    # 核心修復：使用空白行確保 Streamlit 正確渲染 Markdown 的列表與排版
     st.markdown(f'<div class="report-card">\n\n{report}\n\n</div>', unsafe_allow_html=True)
     
     st.download_button(
