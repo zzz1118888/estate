@@ -3,5 +3,7 @@ requests
 zhipuai
 pandas
 folium
-plotly
 streamlit-folium
+plotly
+sniffio
+httpx
