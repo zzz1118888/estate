@@ -582,7 +582,7 @@ if start_btn and target_address:
             st.info("該目標半徑內暫無抓取到軌道交通樞紐數據。")
 
     st.markdown("---")
-    st.markdown("### 📑 AI 商業潛力深度報告")
+    st.markdown("### AI 商業潛力深度報告")
     
     # 核心修復：使用空白行確保 Streamlit 正確渲染 Markdown 的列表與排版
     st.markdown(f'<div class="report-card">\n\n{report}\n\n</div>', unsafe_allow_html=True)
