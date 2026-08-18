@@ -275,19 +275,14 @@ def generate_ai_report(address, poi_data, official_name):
     except Exception as e:
         return "系统连线异常", f"AI API 连线失败，真实错误讯息如下：\n\n`{str(e)}`"
 
-# --- 核心修复：更智能的悬浮框文本截断与排版引擎 ---
 def format_hover_text(items):
     if not items: 
         return "无数据"
     
-    # 限制悬浮框最多只展示前 8 个代表性设施，避免成为“文字墙”
     display_items = items[:8]
-    
-    # 将每行显示的设施数量从 3 减少为 2，避免单行字符过宽导致 Plotly 强行截断
     chunks = ["、".join(display_items[i:i+2]) for i in range(0, len(display_items), 2)]
     hover_str = "<br>".join(chunks)
     
-    # 如果总设施超过限制，底部添加智能提示
     if len(items) > 8:
         hover_str += f"<br><br><i>...等共 {len(items)} 项 (详见下方折叠面板)</i>"
         
@@ -435,7 +430,7 @@ if start_btn and target_address:
             chart_data, x="分类", y="数量", text="数量", custom_data=["清单"],
             color_discrete_sequence=["#3B82F6"]
         )
-        # 添加 align="left"，确保悬浮框内的排版左对齐，视觉更稳定
+        # --- 【修复核心】：设置 fixedrange=True 与 dragmode=False 以禁止拖拉与缩放 ---
         fig.update_traces(
             textposition='outside', textfont_size=16, textfont_color="#1E293B",
             hovertemplate="<b>%{x}</b><br>总数: %{y}<br><br><b>设施明细:</b><br>%{customdata[0]}<extra></extra>",
@@ -444,9 +439,16 @@ if start_btn and target_address:
         fig.update_layout(
             xaxis_title=None, yaxis_title=None, showlegend=False,
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, t=20, b=0),
-            xaxis=dict(tickangle=0, tickfont=dict(size=14, color="#64748B"), showline=True, linecolor='#E2E8F0'),
-            yaxis=dict(showgrid=True, gridcolor="#F1F5F9", zeroline=True, zerolinecolor="#E2E8F0"),
-            height=380
+            xaxis=dict(
+                tickangle=0, tickfont=dict(size=14, color="#64748B"), showline=True, linecolor='#E2E8F0',
+                fixedrange=True # 锁定 X 轴缩放
+            ),
+            yaxis=dict(
+                showgrid=True, gridcolor="#F1F5F9", zeroline=True, zerolinecolor="#E2E8F0",
+                fixedrange=True # 锁定 Y 轴缩放
+            ),
+            height=380,
+            dragmode=False # 全局禁用拖拽模式
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
